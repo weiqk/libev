@@ -39,9 +39,6 @@
 
 #ifdef _WIN32
 
-/* timeb.h is actually xsi legacy functionality */
-#include <sys/timeb.h>
-
 /* note: the comment below could not be substantiated, but what would I care */
 /* MSDN says this is required to handle SIGFPE */
 /* my wild guess would be that using something floating-pointy is required */
@@ -91,6 +88,8 @@ ev_pipe (int filedes [2])
   if (connect (sock [0], (struct sockaddr *)&addr, addr_size))
     goto fail;
 
+  /* TODO: returns INVALID_SOCKET on winsock accept, not < 0. fix it */
+  /* when convenient, probably by just removing error checking altogether? */
   if ((sock [1] = accept (listener, 0, 0)) < 0)
     goto fail;
 
@@ -143,7 +142,7 @@ fail:
 
 #undef pipe
 #define pipe(filedes) ev_pipe (filedes)
-  
+
 #define EV_HAVE_EV_TIME 1
 ev_tstamp
 ev_time (void)
@@ -155,8 +154,8 @@ ev_time (void)
   ui.u.LowPart  = ft.dwLowDateTime;
   ui.u.HighPart = ft.dwHighDateTime;
 
-  /* msvc cannot convert ulonglong to double... yes, it is that sucky */
-  return (LONGLONG)(ui.QuadPart - 116444736000000000) * 1e-7;
+  /* also, msvc cannot convert ulonglong to double... yes, it is that sucky */
+  return EV_TS_FROM_USEC (((LONGLONG)(ui.QuadPart - 116444736000000000) * 1e-1));
 }
 
 #endif
